@@ -1,0 +1,100 @@
+---
+title: "Regression and smoothing"
+author: "Dr. Justin Wishart"
+output: 
+    html_document:
+        css: ../style.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load the data 
+
+We will be using a dataset of Melbourne house prices. Let's first load the data and see what is in the table. This dataset was downloaded from Kaggle and the data was released under the CC BY-NC-SA 4.0 license.   
+
+
+```{r load}
+melbdata <- read.csv("Melbourne_housing_FULL.csv", header = TRUE)
+dim(melbdata)
+colnames(melbdata)
+```
+Now let's subset to only look at house prices in St. Kilda (and remove cases that have the price variable missing). 
+
+```{r stkilda, echo = -6} 
+st.kilda <- subset(melbdata, Suburb == "St Kilda")
+dim(st.kilda)
+sum(is.na(st.kilda$Price))
+st.kilda <- st.kilda[!is.na(st.kilda$Price), ]
+dim(st.kilda)
+```
+
+Let's plot this using the `ggplot2` package. 
+
+```{r plot} 
+library(ggplot2)
+ggplot(st.kilda, aes(x = BuildingArea, y = Price/1000)) + geom_point()
+```
+
+
+## First regression model 
+
+```{r regression} 
+lmfit <- lm(Price ~ BuildingArea, data = st.kilda)
+summary(lmfit)
+new <- data.frame(BuildingArea = 100)
+predict(lmfit, new, interval = "confidence")
+```
+
+## Remove outliers 
+
+To improve our regression model, let's try to remove the two points that look like outliers (and expensive places)
+and do the `lm()` fit again. 
+
+```{r outlier} 
+# Below the | operator does elementwise OR to check either of two conditions
+outliers <- which(st.kilda$BuildingArea < 40 | st.kilda$Price > 1000000)
+st.kilda.sub <- st.kilda[-outliers,]
+lmfit2 <- lm(Price ~ BuildingArea, data = st.kilda.sub)
+summary(lmfit2)
+```
+
+## Multivariate regression 
+
+Now let's add building type as a predictor in our model and see if it improves the prediction. 
+
+```{r multi} 
+lmfit3 <- lm(Price ~ Type + BuildingArea, data = st.kilda.sub) 
+summary(lmfit3)
+new <- data.frame(BuildingArea = c(100,100), Type = c("u", "h")) # Cant predict townhouse since none exist in original data after filtering. 
+predict(lmfit3, new) 
+
+```
+
+## Spline smoothing 
+
+```{r spline}
+st.kilda.noNA <- subset(st.kilda.sub, !is.na(BuildingArea) & !is.na(Price))
+dim(st.kilda.noNA)
+
+spline.fit <- smooth.spline(x=st.kilda.noNA$BuildingArea, y = st.kilda.noNA$Price)
+# Or use with
+spline.fit2 <- with(st.kilda.noNA, smooth.spline(x = BuildingArea, y = Price))
+```
+
+## Loess smoothing 
+
+```{r loess} 
+lo1.fit <- loess(Price ~ BuildingArea, data = st.kilda.noNA)
+
+plot(st.kilda.noNA$BuildingArea, st.kilda.noNA$Price)
+lines(spline.fit, col = "purple", lwd =2)
+lines(sort(st.kilda.noNA$BuildingArea), predict(lo1.fit, sort(st.kilda.noNA$BuildingArea)), col = "red", lwd =2)
+legend("bottomright",c("Spline","Loess"),
+      lty=c(1,1), col=c("purple", "red"))
+
+# We can also use the loess fit to do prediction 
+predict(lo1.fit, 100)
+
+```

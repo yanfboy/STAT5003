@@ -1,0 +1,189 @@
+---
+title: "STAT5003T1"
+author: "Kaidan"
+date: "2022-08-05"
+output: html_document
+---
+```{r}
+library(readr)
+#library(dplyr)
+#library(tidyverse)
+```
+
+# Lab Week1
+
+## 2 File I/O
+
+### 2.1 Read
+
+##### Download the Cereal.csv file from the Canvas page and use the read.csv command to read in the csv file into R and assign it to the object called cereal.
+
+```{r cereal}
+#url_link <- paste0("https://apiapex.tesouro.gov.br/aria/")
+#download.file(url = url_link, destfile = "Downloads/file_name.xls")
+cereal = read_csv("Cereal.csv")
+```
+
+### 2.2 Data frames
+
+##### a.There should be a default dataset in R called cereal. Use the head function to inspect the first few lines of the data frame and use class to check that cereal is in fact a data frame.
+
+```{r}
+head(cereal)
+class(cereal)
+```
+
+##### b.What are the column names of the cereal data frame? How many rows are there? (dim and nrow)
+
+```{r}
+dim(cereal)
+nrow(cereal)
+colnames(cereal)
+```
+
+The column names are "name", "mfr", "type","calories" "protein", "fat", "sodium", "fiber", "carbo", "sugars", "potass", "vitamins", "shelf", "weight", "cups" and "rating". There are overall 77 rows.
+
+##### c.Extract the calories column using the \$ operator and using the [[ operator.
+
+```{r}
+cereal$calories
+```
+
+? [[ operator why use?
+
+##### d.Extract rows 1 to 10 from the cereal data frame.
+
+```{r}
+cereal$calories[seq(1,10)]
+```
+
+##### e.Make a new data frame called Kelloggs which only contains rows that belongs to manufacturer, Kellogs (when mfr takes the value "K").
+
+```{r}
+table(cereal$mfr)
+Kelloggs = cereal[cereal$mfr == 'K',]
+Kelloggs
+```
+
+### 2.3 Factors
+
+##### a.Load the Cereal data again with the read.csv command again. This time, use the optional argument, stringsAsFactors = TRUE.
+
+```{r}
+cereal = read.csv("Cereal.csv", stringsAsFactors = TRUE)
+```
+
+##### b.The mfr and type columns are now factors. Check that this is true.
+
+```{r}
+str(cereal$mfr)
+str(cereal$type)
+```
+
+##### c. How many levels are there in mfr and type? (use the functions levels or nlevels)
+
+```{r}
+nlevels(cereal$mfr)
+nlevels(cereal$type)
+```
+
+### 2.4 Vectors
+
+##### a. Extract the calories into a new vector called cereal.calories.
+
+```{r}
+#cereal.calories = cereal$calories
+cereal.calories = cereal$calories
+```
+
+##### b. How many elements are there in cereal.calories? (length)
+
+```{r}
+length(cereal.calories)
+```
+
+##### c. Extract the 5th to the 10th element from cereal.calories.
+
+```{r}
+cereal.calories[seq(5,10)]
+```
+
+##### d. Add one more element to cereal.calories using c().
+
+```{r}
+cereal.calories = c(cereal.calories, 100)
+length(cereal.calories)
+```
+
+### 2.5 Matrix
+
+##### a. Can you force the cereal data frame to be a Matrix? (as.matrix(cereal)). Check that the elements have been forced into the character type.
+
+```{r}
+head(as.matrix(cereal))
+str(as.matrix(cereal))
+```
+
+##### b. Now do this again, but this time leave out the mfr, name and type columns. Check that the elements are now numeric.
+
+```{r}
+head(data.matrix(cereal)[, c(-1,-2,-3)])
+dim(data.matrix(cereal)[, c(-1,-2,-3)])
+class(data.matrix(cereal)[, c(-1,-2,-3)])
+str(data.matrix(cereal)[, c(-1,-2,-3)])
+```
+
+## 3 Numerical summary
+
+### 3.1 Summary Vectors
+
+##### Use the summary function to extract the median, 1st quartile and 3rd quartile data from the *sodium* column.
+
+```{r}
+summary(cereal$sodium)
+```
+
+### 3.2 Basic statistics
+
+##### b. Find the max, min, standard deviation and mean of the *sodium* (max(), min(), sd(), mean())
+
+```{r}
+max(cereal$sodium)
+min(cereal$sodium)
+sd(cereal$sodium)
+mean(cereal$sodium)
+```
+
+##### c. Find the mean sodium of each mfr.
+
+```{r}
+head(cereal)
+tapply(cereal$sodium, cereal$mfr, mean)
+```
+
+## 4 Graphical summary
+
+### 4.1 Boxplot
+
+##### a. Make a boxplot of the *sodium* against *mfr* using boxplot().
+
+```{r}
+boxplot(cereal$sodium ~ cereal$mfr)
+```
+
+### 4.2 Scatterplot
+
+##### b. Plot calories against sodium using plot().
+
+```{r}
+plot(cereal$calories ~ cereal$sodium)
+```
+
+## 5 Write Data to File
+
+##### Write data frame with only the Kellogg's observations to a file called kelloggs.csv. Use the write.csv command.
+
+```{r}
+Kelloggs = cereal[cereal$mfr == "K",]
+write.csv(Kelloggs,file = "kelloggs.csv")
+```

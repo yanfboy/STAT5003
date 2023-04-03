@@ -1,0 +1,166 @@
+---
+title: "Trees and ensemble models" 
+subtitle: "STAT5003 2020"
+author: "Justin Wishart"
+date: "Semester 2, 2020"
+output: 
+  html_document:
+    css: ../style.css
+---
+
+## Libraries to load
+
+```{r, warning = FALSE, message = FALSE}
+library(tree)
+```
+
+## Single tree based methods 
+
+### Regression tree
+
+```{r }
+data(Hitters, package = "ISLR")
+Hitters <- na.omit(Hitters)
+rt <- tree(Salary ~ Hits + Years, data = Hitters)
+
+summary(rt)
+
+plot(rt)
+text(rt)
+
+# Lecture tree
+# rt <- tree(Salary ~ Hits + Years, data = Hitters,
+#            control = tree.control(nobs = nrow(Hitters), minsize = 100)
+```
+
+### Classification tree
+```{r}
+salary.cat <- cut(Hitters[["Salary"]], 
+                  breaks = c(0, 500, 750, 1000, 5000))
+ct <- tree(salary.cat ~ Hits + Years, data = Hitters)
+
+summary(ct)
+
+plot(ct)
+text(ct)
+```
+
+### Regression tree
+This section introduce regression tree using housing value dataset of Boston suburbs
+```{r}
+library(MASS) 
+set.seed(1)
+train <- sample(1:nrow(Boston), nrow(Boston)/2)
+
+# medv: median value of owner-occupied homes in $1000s.
+tree.boston <- tree(medv ~ ., Boston, subset = train) 
+summary (tree.boston)
+plot(tree.boston) 
+text(tree.boston)
+
+# check the RSS of the prediction
+yhat <- predict(tree.boston, newdata = Boston[-train, ])
+boston.test <- Boston[-train, "medv"]
+plot(yhat, boston.test) 
+abline(0, 1)
+mean((yhat - boston.test)^2)
+```
+
+## Tree ensembles
+
+### Implement bagging ourselves
+
+```{r, warning = FALSE}
+library(caret)
+set.seed(123)
+Hitters[["salary.cat"]] <- salary.cat
+Hitters[["binary.salary"]] <- factor(salary.cat == "(0,500]",
+                                     labels = c(">500k", "<=500k"))
+with(Hitters, table(binary.salary))
+with(Hitters, table(salary.cat))
+inTrain <- createDataPartition(Hitters[["salary.cat"]], p = 0.5)[[1]]
+hit.train <- Hitters[inTrain,]
+hit.test  <- Hitters[-inTrain,]
+
+# single binary tree classification 
+tree.model <- tree(binary.salary ~ . - Salary - salary.cat, data = hit.train)
+tree.preds <- predict(tree.model, newdata = hit.test)
+tree.classified <- levels(Hitters[["binary.salary"]])[apply(tree.preds, 1, which.max)]
+tree.accuracy <- mean(tree.classified == hit.test[["binary.salary"]])
+tree.accuracy
+
+# create bagging (a type of ensemble)
+n.train <- nrow(hit.train)
+bagging.predictions <- vapply(1:100, function(x) {
+    idx <- sample(x = 1:n.train, size = n.train, replace = TRUE)
+    tree.model <- tree(binary.salary ~ . - Salary - salary.cat,
+                       data = hit.train[idx, ])
+    predict(tree.model, newdata = hit.test)[,"<=500k"]
+    }, numeric(nrow(hit.test)))
+
+bagging.classified <- ifelse(rowMeans(bagging.predictions) > 0.5, "<=500k", ">500k")
+bagging.accuracy <- mean(bagging.classified == hit.test[["binary.salary"]])
+bagging.accuracy
+```
+
+
+### Bagging (use randomForest package)
+```{r}
+# Random forest will reduce into bagging if all features are used at every split
+# Here we testing bagging by using random forest package and allowing the use of all features.
+library(randomForest) # also consider using ranger, much faster than randomForest
+set.seed(1)
+
+# Bagging for classification
+dim(Hitters)
+names(Hitters)
+bag.hit <- randomForest(binary.salary ~ . - Salary - salary.cat, data = Hitters,
+                        importance = TRUE, mtry = 19)
+print(bag.hit)
+bag.hit$importance
+
+# Bagging for regression
+dim(Boston)
+bag.boston <- randomForest(medv ~ ., data = Boston, subset = train, mtry = 13, importance = TRUE)
+print(bag.boston)
+bag.boston$importance
+```
+
+
+
+### Random forest
+```{r}
+set.seed(1)
+
+# Random forest for classification
+dim(iris)
+bag.iris <- randomForest(Species ~ ., data = iris, importance = TRUE, mtry = 1)
+print(bag.iris)
+bag.iris$importance
+
+# Random forest for regression
+dim(Boston)
+rf.boston <- randomForest(medv~., data = Boston, subset = train, mtry = 6, importance = TRUE)
+print(rf.boston)
+varImpPlot(rf.boston)
+```
+
+### Boosting
+```{r}
+# regression=
+library(gbm)
+set.seed(1)
+boost.boston <- gbm(medv ~ ., data = Boston[train, ],
+                    distribution = "gaussian", n.trees = 5000)
+summary(boost.boston)
+
+# classification
+adaBoost.model <- gbm(as.numeric(binary.salary) - 1 ~ . - Salary - salary.cat,
+                      data = hit.train, distribution = "adaboost",
+                      n.trees = 5000)
+summary(adaBoost.model)
+
+preds <- predict(adaBoost.model, newdata = hit.test,
+                 n.trees = 5000, type = "response")
+mean(ifelse(preds > 0.5, "<=500k", ">500k") == hit.test[["binary.salary"]])
+```

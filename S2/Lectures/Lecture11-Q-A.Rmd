@@ -1,0 +1,276 @@
+---
+title: "STAT5003"
+subtitle: "Week 11: Q & A"
+author: "Dr. Justin Wishart"
+institute: "The University of Sydney"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: ../style.css
+  xaringan::moon_reader:
+    keep_md: yes
+    css: ["assets/sydney-fonts.css", "assets/sydney.css"]
+    self_contained: false # if true, fonts will be stored locally
+    seal: false # show a title slide with YAML information
+    includes:
+      in_header: "assets/mathjax-equation-numbers.html"
+    nature:
+      # beforeInit: ["assets/remark-zoom.js", "https://platform.twitter.com/widgets.js"]
+      # highlightStyle: github
+      # highlightLines: true
+      countIncrementalSlides: falseto
+      ratio: '16:9' # alternatives '16:9' or '4:3' or others e.g. 13:9
+      navigation:
+        scroll: false # disable slide transitions by scrolling
+---
+
+```{r setup, include = FALSE}
+library(RefManageR)
+library(rstanarm)
+data(PimaIndiansDiabetes2, package = "mlbench")
+BibOptions(check.entries = FALSE, 
+           bib.style = "authoryear", 
+           cite.style = 'authoryear', 
+           style = "markdown",
+           hyperlink = FALSE, 
+           dashed = FALSE)
+myBib <- ReadBib("../stat5003.bib", check = FALSE)
+```
+
+
+# Transition Probability Matrix
+
+> _How did you come up with the probability of sunny remaining sunny? How did you decide the values of matrix $P$?_
+
+* The example given in the Lecture had no real intrinsic link to data. It was just a simple example. 
+
+---
+
+# Markov Chains
+
+> _Given that Markov Chains are essentially a 'memory-less' system, is the MCMC generally not computationally intensive to implement?_
+
+* Memory less only in the statistical theory sense.
+* It is still a computationally intensive method
+* It is an iterative algorithm
+
+---
+
+# Posterior Distribution and Frequentist vs Bayesian
+
+> _Can Justin please go through this concept a bit more in the Q&A, and maybe show us how to implement it in `R`?_
+
+* Want to compute
+
+\begin{align*}
+    f(\theta|data) &= \frac{f(\theta, data)}{f(data)} = \frac{f(data|\theta)p(\theta)}{\int f(data|\theta) p(\theta)\, d\theta}\\
+    f(\theta|data) &\propto f(data|\theta)p(\theta)\\
+    \text{posterior} &\propto \text{likelihood} \cdot \text{prior}
+\end{align*}
+
+Consider binomial chance of success again.
+
+$\theta = p$
+
+$f(y|\theta) \propto \theta^y (1 - \theta)^{n - y}$
+
+Suppose you are searching for something valuable. $p =$ chance of getting lucky and rich. Say after $n = 50$ checks, you find the valuable item $y = 21$ times. Can plot the Likelihood
+
+```{r}
+n <- 50
+theta <- seq(from = 0, to = 1, length.out = 1024)
+y <- 21
+likelihood <- dbinom(x = y, size = n, prob = theta)
+plot(theta, likelihood, ty = 'l')
+abline(v = y/n, lty = 'dotted', col = 2)
+```
+
+The MLE above is $\widehat \theta$ =`r y/n`
+
+## Prior belief
+
+* Suppose there is prior knowledge (belief) about the parameter
+    - Could be past data
+    - Could be some subjective expert opinion.
+
+### Types of prior
+
+* Informative and non-informative prior.
+* Non-informative doesnt place more probability mass on some areas
+    - Level playing field to start the model.
+* Informative prior places more probability mass on some areas.
+    - Impact is it drags the final result towards that bias.
+
+### Nice Informative prior here
+
+Beta distribution (known as a conjugate prior since the posterior is also Beta when the likelihood is modelled using a Binomial distribution)
+
+See list of [Conjugate priors here](https://en.wikipedia.org/wiki/Conjugate_prior)
+
+Consider the historical data suggests there are 3 successes ($\alpha$ param) and 12 failures ($\beta$ param) in a search.
+
+$p(\theta) \propto \theta^{\alpha - 1}(1 - \theta)^{\beta-1}$
+
+(or can use `dbeta`)
+
+```{r beta-plot}
+prior <- dbeta(theta, 2, 8)
+plot(theta, prior, ty = 'l')
+lines(theta, )
+```
+
+Can then compute the posterior
+
+```{r}
+posterior <- likelihood * prior / (1/length(theta) * sum(dbinom(x = y, size = n, prob = theta) * prior))
+plot(theta, prior, col = 2, ty = 'l', ylim = c(0, 7))
+lines(theta, likelihood * n, col = 3)
+lines(theta, posterior, col = 4)
+legend("topleft", legend = c("Prior", "Likelihood", "Posterior"), col = 2:4, lty = 1)
+```
+
+To do a Bayesian Analysis
+
+* Specify a model like above
+    - What is a good prior? `r Citet(myBib, "gelman2008weakly")`
+* Draw from the posterior distribution using Markov Chain Monte Carlo (MCMC).
+* Evaluate the model, how well does it fit the data and possibly revise the model.
+* Perform inference
+    - Compute the expected value of the parameter given the posterior, use it for predictions.
+    - Compute the MAP (Maximum a posteriori) for point estimation
+
+### Bayesian vs Frequentist
+
+* Frequentist Approach:
+    - Assumes parameters are fixed but unknown (estimated from empirical results)
+    - Estimates with some confidence
+    - Prediction uses the estimated parameter value
+* Bayesian Approach:
+    - Parameters are modeled with uncertainty (allowed to be random)
+    - Uses probability to quantify this uncertainty:
+    - Prediction follows from the rules of probability, typically using the expected value on the parameters.
+
+```{r }
+t_prior <- student_t(df = 7, location = 0, scale = 2.5)
+bayes_logreg <- stan_glm(diabetes ~ ., data = PimaIndiansDiabetes2,
+                      family = binomial(link = "logit"), 
+                      prior = t_prior, prior_intercept = t_prior, QR=TRUE)
+```
+
+```{r posterior-plots}
+plot(bayes_logreg, plotfun = "areas", prob = 0.95, prob_outer = 1,
+     pars = colnames(PimaIndiansDiabetes2)[-9])
+```
+
+---
+
+# Proposal function and choice of sigma (slide 14)
+
+> _The choice of sigma affects how quickly the state space is explored - is it correct that if sigma is small, the gaussian function is more narrow, and quicker to explore, but if sigma is large, then the gaussian is wider, more but slower to explore? thank u_
+
+* Yes, if the Proposal distribution is Gaussian centered at the last value of the Markov chain, then the new proposals will vary around that value
+  - The larger the sd, the more exploration space the proposal will visit.
+
+```{r}
+sigma <- c(1/2, 1, 5)
+n <- 1024
+x <- max(sigma) * seq(from = -3, to = 3, length.out = n)
+gaussians <- vapply(sigma, function(sig) dnorm(x, mean = 0, sd = sig), numeric(n))
+dat <- data.frame(x = x,
+                  Proposal = as.vector(gaussians),
+                  Sigma = factor(rep(sigma, each = n)))
+library(ggplot2)
+ggplot(dat) + theme_minimal() + 
+  geom_line(aes(x = x, y = Proposal, group = Sigma, colour = Sigma))
+
+```
+ 
+
+# Aperiodic (slide 9)
+
+> _Can you pls explain what you mean by "there are no loops in the Markov chain. If this is not satisfied, then the system
+will oscillate"? What loops are you referring to, and what did you mean by the system will oscillate"? _
+
+The periodicity of states measures how long it takes to revisit that state.
+
+Consider the following.
+
+\begin{align}
+  P = \begin{pmatrix} 0 & 0 & 1\\
+                      0 & 0 & 1\\
+                      1/2 & 1/2 & 0
+      \end{pmatrix}
+\end{align}
+
+
+```{r}
+library(DiagrammeR)
+nodes <- create_node_df(n = 3, label = c("A", "B", "C"))
+edges <- create_edge_df(from = c(1, 2, 3, 3),
+                        to = c(3, 3, 1, 2),
+                        label = as.character(c(1, 1, 1/2, 1/2)))
+                        # headport = c("nw", rep(NA, 2), NA, "nw", rep(NA, 4)),
+                        # tailport = c("ne", rep(NA, 2), NA, "ne", rep(NA, 4)))
+graph <- create_graph(nodes_df=nodes, edges_df=edges)
+graph %>% render_graph
+```
+
+---
+
+# Metropolis-Hastings algorithm
+
+> _in $Y ~ q(x|X_t)$, can u clarify what $Y$ is? if we assume $q(x,y)$ is Gaussian, how do we obtain $Y$ knowing $q$ and $X_t$?_
+
+In, the above $Y$ represents a new value of the Markov chain.
+
+For a Markov chain, it has the requirement.
+
+\[
+  P(X_{t+1}|X_t, X_{t-1}, \dots, X_0) = P(X_{t+1}|X_t)
+\]
+
+Distribution of the next point in the process, $X_{t+1}$ depends __only__ on $X_t$ and the history before it can be ignored (memory-less).
+
+So if $X_t$ is known, the next value could be simulated using $q(\cdot|X_t = x) \sim \mathcal N(x, \sigma)$
+
+```{r}
+n <- 1000
+x <- numeric(n)
+x[1] <- runif(1, min = -10, max = 10)
+for(i in 1:n)
+  x[i + 1] <- rnorm(1, mean = x[i], sd = 1)
+plot(x)
+```
+> _What are $f(y)$ and $f(x)$ in the alpha equation?)_
+
+* $f$ represents the target distribution. $f(x)$ and $f(y)$ in the algorithm denote the density values at the current and proposed state in the algorithm.
+
+> _Why are we drawing from a uniform distribution for $U$? Can we use something else?_
+
+* The goal of that part of the algorithm is to accept (or reject) a proposed move with probability $\alpha$ (1 - $\alpha$)
+* Could use a different distribution but would get more complicated than required.
+
+---
+
+# What are the steps to get to this arrangement?
+
+![](TPM.jpg)
+---
+
+# Can you please explain the highlighted more in detailed?
+
+![](Markov.jpg)
+
+---
+
+# Can you please illustrate how these calculations work?
+
+![](TPM2.jpg)
+
+---
+
+## References
+
+```{r, results = "asis", echo=FALSE}
+PrintBibliography(myBib)
+```

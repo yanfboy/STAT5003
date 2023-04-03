@@ -1,0 +1,1 @@
+"0","cereal = read.csv(""Cereal.csv"", stringsAsFactors = TRUE)"

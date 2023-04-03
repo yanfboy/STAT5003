@@ -1,0 +1,95 @@
+---
+title: "Markov Chain Monte Carlo"
+subtitle: "STAT5003 2020"
+author: "Justin Wishart"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    css: ../style.css
+---
+
+## Politician intuition demonstration
+
+A simple MCMC example where a politician wishes to spend time at town halls  proportional to the number of voters at each town hall. Let's say there are 4 town halls A, B, C, D with 100, 500, 900, 1200 people respectively. 
+
+```{r q1}
+#define population levels
+populations <- c(A = 100, B = 500, C = 900, D = 1200)
+# Look at the relative sizes of the populations
+pi <- populations/sum(populations)
+pi
+barplot(pi, names.arg = names(populations))
+# Define function to do simulation
+politician.sampling <- function(n, populations, starting.position)
+{
+    output <- rep(0, n)
+    positions <- seq_along(populations)
+    current.population <- populations[starting.position]
+    position <- starting.position
+    for (i in 1:n)
+    {
+        next.position <- sample(positions, size = 1)
+        next.population <- populations[next.position]
+        # Compute acceptance probability
+        p <- min(1, next.population/current.population)
+        if (runif(1) < p)
+        {
+            position <- next.position
+            current.population <- next.population
+        }
+        output[i] <- position
+    }
+    output
+}
+# Number of iterations to simulate
+n.iterations <- 1000
+simulation.result <- politician.sampling(n.iterations, populations, 4)
+# Inspect the probabilities the politician visits each place.
+relevant.chances <- table(simulation.result)/n.iterations
+relevant.chances
+barplot(relevant.chances, names.arg = names(populations))
+# Consider how well the simulation does with increasing n
+n.iterations <- c(100, 1000, 10000, 100000)
+simulation.results <- lapply(n.iterations, politician.sampling,
+                             populations = populations, starting.position = 1)
+results.tables <- sapply(simulation.results, table)
+normalised.results <- sweep(results.tables, 2, n.iterations, "/")
+# Append true distribution
+normalised.results <- cbind(normalised.results, pi)
+colnames(normalised.results) <- c(paste0("n = ", n.iterations), "pi")
+normalised.results
+library(RColorBrewer)
+palette <- brewer.pal(5, "Dark2")
+barplot(t(normalised.results), beside = TRUE, 
+        names.arg = names(populations), col = palette)
+legend("topleft", legend = colnames(normalised.results), fill = palette)
+```
+
+Notice that the probabilities of visiting each location converge to the relative population ratios as $n$ increases.
+
+## MCMC sampling
+
+This example shows you how to sample from an exponential distribution using the Metropolis-Hastings algorithm. 
+
+```{r}
+set.seed(5003)
+# Define the exponential distribution with lambda = 2 
+f_x <- function(x) ifelse(x < 0, 0, 2 * exp(- 2 * x))
+# Initialise x to be something 
+x <- x.init <- 2
+n <- 10000
+res <- numeric(n)
+for(i in 1:n) { 
+   # Set the proposal to be our current position plus a random normal 
+   propose_x <- x + rnorm(1, mean = 0, sd = 1) 
+   # Calculate the acceptance probability 
+   alpha <- min(f_x(propose_x)/f_x(x) , 1)
+   # Randomly decide whether to accept our new proposal 
+   if (runif(1) < alpha)
+        x <- propose_x 
+   res[i] <- x
+}
+
+hist(res, freq = FALSE, breaks = 20 )
+lines(seq(0,4, 0.2), f_x(seq(0,4,0.2)), col = "red")
+```

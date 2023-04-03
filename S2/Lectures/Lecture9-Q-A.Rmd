@@ -1,0 +1,195 @@
+---
+title: "STAT5003"
+subtitle: "Week 9: Q & A"
+author: "Dr. Justin Wishart"
+institute: "The University of Sydney"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: ../style.css
+  xaringan::moon_reader:
+    keep_md: yes
+    css: ["assets/sydney-fonts.css", "assets/sydney.css"]
+    self_contained: false # if true, fonts will be stored locally
+    seal: false # show a title slide with YAML information
+    includes:
+      in_header: "assets/mathjax-equation-numbers.html"
+    nature:
+      # beforeInit: ["assets/remark-zoom.js", "https://platform.twitter.com/widgets.js"]
+      # highlightStyle: github
+      # highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9' # alternatives '16:9' or '4:3' or others e.g. 13:9
+      navigation:
+        scroll: false # disable slide transitions by scrolling
+---
+
+```{r setup, include = FALSE}
+library(RefManageR)
+BibOptions(check.entries = FALSE, 
+           bib.style = "authoryear", 
+           cite.style = 'authoryear', 
+           style = "markdown",
+           hyperlink = FALSE, 
+           dashed = FALSE)
+myBib <- ReadBib("../stat5003.bib", check = FALSE)
+```
+
+
+# Plot interpretation
+
+> _On the y-axis, what is the purpose of having error/ min error?  How do you interpret this plot please?_
+
+![](friedman-boxplots.png)
+
+* Open `R` and demo
+
+---
+
+# Reducing the variance
+
+> _When we say "for reducing the variance" this means to reduce the overfitting? _
+
+* Yes, in general model performance can be measured by the concept of MSE
+    - MSE = bias$^2$ + Var
+* Reducing the variance (assuming bias doesnt increase) will improve performance (reduce error)
+
+---
+
+# Bootstrap aggregation vs Random forest vs Boosting
+
+> _Can you please illustrate the difference between bootstrap aggregation vs random forest vs boost? When should use each of them and what are their advantages and disadvantages?_
+
+* Bagging:
+    - Many decision/regression trees are constructed in parallel
+    - Bootstrapped training data used to build each tree
+    - Idea is averaging results across many trees reduces the final estimates variability
+* Random Forest:
+    - Same as bagging except random selection of predictors chosen at each split point.
+    - The random selection of predictors __reduces__ correlation between trees
+    - Overall variance of the form $\mathbb{V}\text{ar}(\widehat f(x)) = r(x)\sigma^2(x)$
+    - Easy to tune, easier to get a decent answer.
+* Boosting:
+    - More general
+        - Can apply to more general models by changing the loss function
+    - Can have better predictive performance than random forest
+    - Harder to tune than random forest
+        - More parameters
+        - Easier to get it wrong
+    - Generally slower since the trees are built sequentially (harder to parallelize)
+        - XGboost has some fast implementations
+    - Very good explanation on boosting here
+            - https://xgboost.readthedocs.io/en/latest/tutorials/model.html
+
+---
+
+# Individual vs caret packages
+
+> _Do people implement the trees using individual packages (`tree`, `randomForest`, `gbm`, etc) or use the ones in `caret` (by selecting the appropriate method)? If people would do CV or repeated CV in their training for hyper-parameter tuning, why wouldn't they use `caret` (which seems to take care of the split, parameter tuning, etc automatically) rather than use the individual packages and do them manually?_
+
+---
+
+# Trees and predictive performance
+
+> _Why do not trees  have the same level of predictive accuracy ?_
+
+* Trees tend to overfit
+* By their very construction not smooth.
+
+---
+
+# Boosting methods
+
+> _Hi, what are the main differences between adaboosting, stochastics gradient boosting and XGboosting? When should we apply each method?_
+
+* XGboost is essentially a modern implementation of the Gradient Boosting Machine (GBM).
+
+* Also Adaboost can be considered a special case as well (see Chapter 10.9 of `r Citet(myBib, "hastie-et-al-2017")`)
+    - Also can see paper on gradient boosting machine here `r Citet(myBib, "friedman2001")`
+
+
+* Can consider a tree,
+
+\begin{align*}
+    \widehat f(x) = \sum_{j = 1}^J c_j \mathbb{1}(x \in R_j)
+\end{align*}
+
+a piece wise constant estimator along each Region the observation falls in.
+
+* It really is a parametric estimation problem, find $J$ and $\boldsymbol{\theta} = (R_1, R_2, \ldots, R_J, c_1, c_2, \ldots, c_J)$
+
+* This can be written as an estimation problem
+
+\begin{align*}
+    \widehat{\boldsymbol{\theta}} = \text{arg}\min_{R_i, c_i; i = 1, 2, \ldots, J} \sum_{j = 1}^J \sum_{x_i \in R_j} L(y_i, c_j)
+\end{align*}
+
+* $L$ is a loss function (e.g. square loss)
+    - Above is then 
+    
+    \begin{align*}
+    \widehat{\boldsymbol{\theta}} = \text{arg}\min_{R_i, c_i; i = 1, 2, \ldots, J} \sum_{j = 1}^J \sum_{x_i \in R_j} (y_i-c_j)^2
+    \end{align*}
+* See text for more equations, ran out of time to type...
+
+* Adaboost is just a specific choice of $L$
+
+* Other choices are robust choices (absolute loss instead of square loss)]
+    - Less sensitive to outliers, but slower to implement.
+
+---
+
+# Decision Tree & Missing values 
+
+> _How would the decision tree algorightms handle the missing values? Are those algorithms more robust against missing values compared with the algorithms we learnt in the previous weeks? Can we simply impute the NA values as a new category "unknown" for the classification?_
+
+* For categorical predictors the option of making a new missing category is an option
+    - Other imputation strategies possible.
+* Other strategy is known as surrogate predictors (see 9.2.4 in `r Citet(myBib, "hastie-et-al-2017")`)
+    - Say a predictor $x_m =$ `NA` and you want to predict its response, $y$
+        - Can use other predictors as a surrogate predictor and split point.
+        - E.g. Say during training $X_m$ is the predictor chosen at split point $t$ (call it the primary predictor and split)
+        - a set of surrogate predictors is computed that mimic the same split of the primary
+            - e.g. $s_1 > c$ mimics the same training data that $X_m > t$ during training
+            - If $x_m$ is missing, can fall back to $s_1$ instead
+
+
+---
+
+# Ed 
+
+> _1. what does LOO mean?_
+
+![](ed-1.png)
+
+* LOO stands for Leave one out
+
+> _How do we interpret the row for Alan Ashby? are the 1 , 2 ,3 .....8 on the column the classes? Which class does Alan Ashby belong to?_
+
+![](ed-2.png)
+
+* Goto Example code
+
+> What do the blue dots mean? How to interpret this algorithm please?
+
+![](ed-3.png)
+
+* Blue dots represent the path travelled by observation being predicted.
+* Algorithm takes all the predictions across all trees and aggregates them together
+
+---
+
+# Decision trees: partitioning the predictor space
+
+> _I would be interested in a few further comments on the shape of this partitioning. Are the rectangles a result of a single predictor binary split at each decision point? What is the shape if there are 3 or more partitions per decision {X < 2, 2 <= X <= 4, X > 4}? What happens to the predictor space partitioning when you test more than one variable as well at each decision point?_
+
+* Trinary or higher splits are possible but typically not worth the effort.
+* Open surface and start drawing.
+
+---
+
+## References
+
+```{r, results = "asis", echo=FALSE}
+PrintBibliography(myBib)
+```

@@ -1,0 +1,3 @@
+"0","#url_link <- paste0(""https://apiapex.tesouro.gov.br/aria/"")"
+"0","#download.file(url = url_link, destfile = ""Downloads/file_name.xls"")"
+"0","cereal = read.csv(""Cereal.csv"")"

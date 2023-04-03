@@ -1,0 +1,3 @@
+"0","opt.ind = which.min(ISE.h)"
+"0","opt.h = h.grid[opt.ind]"
+"0","plot(density.estimates[[opt.ind]], main = """",)"

@@ -1,0 +1,1 @@
+"0","plot(melsub$BuildingArea, melsub$Price, xlab = ""Building Area"", ylab = ""Price"", main = ""Mel house regression"")"

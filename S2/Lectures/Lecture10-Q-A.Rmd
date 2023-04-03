@@ -1,0 +1,197 @@
+---
+title: "STAT5003"
+subtitle: "Week 10: Q & A"
+author: "Dr. Justin Wishart"
+institute: "The University of Sydney"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: ../style.css
+  xaringan::moon_reader:
+    keep_md: yes
+    css: ["assets/sydney-fonts.css", "assets/sydney.css"]
+    self_contained: false # if true, fonts will be stored locally
+    seal: false # show a title slide with YAML information
+    includes:
+      in_header: "assets/mathjax-equation-numbers.html"
+    nature:
+      # beforeInit: ["assets/remark-zoom.js", "https://platform.twitter.com/widgets.js"]
+      # highlightStyle: github
+      # highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9' # alternatives '16:9' or '4:3' or others e.g. 13:9
+      navigation:
+        scroll: false # disable slide transitions by scrolling
+---
+
+```{r setup, include = FALSE}
+library(RefManageR)
+BibOptions(check.entries = FALSE, 
+           bib.style = "authoryear", 
+           cite.style = 'authoryear', 
+           style = "markdown",
+           hyperlink = FALSE, 
+           dashed = FALSE)
+myBib <- ReadBib("../stat5003.bib", check = FALSE)
+```
+
+
+# Level of Theory
+
+> _Why is the content this week so theory-heavy?_
+
+* Scaffolding to justify the results
+
+> _Comparatively to previous weeks' content, this is by far the most theory-heavy week. Are we expected to be able to derive all of these formulas for the final exam? To my understanding, this course was supposed to be predominantly practical; whilst the lecture feels like the opposite._
+
+* Formulae are not to be derived at all.
+* The course is predominantly practical.
+
+* There were three practical examples given in detail.
+    - 2 of them directly practical (Coles shop and Option pricing), 
+    - Polya urns seems like a academic problem but it has application:
+* Application of Polya urn is a simple disease modelling.
+    - Each ball colour represents a healthy or sick state.
+    - At each iteration the healthy or sick people increase or decrease by one.
+
+
+# Polya Urn
+
+> _Can you please explain in more detailed why do the lines stabilize as the number of draw increases? What does "polya.urn" on y-axis mean?_
+
+![](Q&A-polya.png)
+
+* Each of the lines represents the proportion of black balls in the urn (y-axis) against the number of draws and additions into the urn (x-axis)
+* The lines stabilize since the addition of a new ball impacts the proportion of black balls less and less as more balls are drawn
+* At draw number $n$ there will be $n + 1$ balls in the urn
+* Say there are $x$ balls in the urn at draw $n$
+    - Proportion of black balls = $x/(n + 1)$
+    - If another black (white) ball is added, the proportion changes to either
+        - $(x+1)/(n+2)$
+        - $x/(n+2)$
+
+# Acceptance-Rejection Method
+
+> _What happens if you set the M too small, such that g(x) ends up below f(x)? Will the function simply error out?_
+
+* Violating the conditions of the algorithm. The function wont error but it won't give you a correct answer.
+* My intuition believes it wont sample enough values in the area where $Mg(x) < f(x)$
+
+
+---
+
+# Example on slide 9 - Monte Carlo Integration example
+
+> _What happens if $g(x)$ cannot cancel out with $f(x)$, could you please walk us through an example like this?  For example $g(x)= x^2$_
+
+* Not quite sure what this question is asking. I'll make an assumption and interrupt me if the question is different.
+
+# Practical application
+
+> _Hi, in the lecture, the examples on MC are quite specific, eg estimating pi, calculating stock options, etc, and we seem to know the true functions for these examples. I was wondering how we could practically apply this method to a dataset, say with 100 features, that we don't know what the true function is. What do we use this method for and how? Is it to estimate the function, to make prediction, to estimate the mean, or to simulate random sampling? Thanks_
+
+* The true function isn't known in calculating stock options, it is assumed.
+* Whole list on [Wikipedia](https://en.wikipedia.org/wiki/Monte_Carlo_method#Applications)
+* Can be used for optimisation.
+    - Searching over the space to find the optimal point.
+
+* Can be used for parameter estimation and interpretation
+* Consider Multiple regression or Logistic regression as a classifier for 100 predictors.
+
+\begin{align*}
+  Y = \beta_0 + \beta_1 X_1 + \ldots + \beta_{100} X_{100} + \varepsilon
+\end{align*}
+
+or 
+
+\begin{align*}
+  \log(p/(1 - p)) = \beta_0 + \beta_1 X_1 + \ldots + \beta_{100} X_{100}
+\end{align*}
+
+* Frequentist approach assumes the $\beta$ values are fixed but unknown
+* Bayesian approach allow $\beta$ to have a likelihood. i.e. there is some density $f_\beta(x)$
+    - $f_\beta(x)$ known as the prior density.
+    - Can determine posterior density $f(\beta|Data)$
+
+* MCMC (Markov Chain Monte Carlo) is a typical way to estimate this 
+
+---
+
+# Monte Carlo convergence
+
+## the speed of  monte carlo convergence？
+
+> _the speed of monte carlo convergence may be O（N^(-0.5)）, but how to get it? could you give detailed explain and could we improve the speed?_
+
+
+* Law of Large Numbers gives this rate of convergence.
+* It can be improved
+* If you can improve it, let me know and we can publish and probably get lots of funding.
+
+## Convergence rate
+
+> _could you explain a little bit more about the convergence rate mentioned in the slide 7? why the parameter would converge to the true parameter value at the rate of N^(1/2) ?_
+
+* I dont want to get bogged in Theoretical details.
+* Simple answer is 
+    - Expected value is the same $\mathbb{E} \overline{X}_n = \mu$
+    - Variance is $\mathbb{V}\text{ar}( \overline{X}_n) = \frac{\sigma^2}{n}$
+* Use Chebyshev (or Markov) inequality
+
+
+---
+
+# Improvement of the Acceptance-rejection method
+
+> _if g(x) does not match f(x) well, can we replace the constant M with a certain type of function, thus overcome the problems mentioned in the slide 17_
+
+---
+
+# how did you get this formula x^2 + y^2 = r^2?
+
+* Pythagoras Theorem and inscribe triangle in circle.
+
+---
+
+# Example on slide 9 - Monte Carlo Integration example
+
+> _What happens if $g(x)$ cannot cancel out with $f(x)$, could you please walk us through an example like this? 
+For example $g(x)= x^2$_
+
+---
+
+# How did the equation on the left become the equation on the right?
+
+![](Q&A-pi.png)
+
+* The equation on the left is the estimate of the equation on the right.
+
+# Acceptance probability
+
+> _Could you please explain why the code under Acceptance rejection method makes this comparison? What are we trying to compare here? Why do we accept value that is greater than `runif(1)`?_
+
+```
+accept <- min(f(x)/(M * dnorm(x)), 1)
+if (runif(1) < accept)
+        sampled <- c(sampled, x)
+```
+
+* `runif(1)` will generate a random value between 0 and 1. 
+* `accept` is a value between 0 and 1 by construction
+    - It is fixed.
+* Draw picture to explain this.
+
+
+---
+
+# Why are we trying to minimize the distance shown below?
+
+![](Q&A-accept-rejct.png)
+
+---
+
+## References
+
+```{r, results = "asis", echo=FALSE}
+PrintBibliography(myBib)
+```

@@ -1,0 +1,129 @@
+---
+title: "STAT5003"
+subtitle: "Week 7: Q & A"
+author: "Dr. Justin Wishart"
+institute: "The University of Sydney"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: ../style.css
+  xaringan::moon_reader:
+    keep_md: yes
+    css: ["assets/sydney-fonts.css", "assets/sydney.css"]
+    self_contained: false # if true, fonts will be stored locally
+    seal: false # show a title slide with YAML information
+    includes:
+      in_header: "assets/mathjax-equation-numbers.html"
+    nature:
+      # beforeInit: ["assets/remark-zoom.js", "https://platform.twitter.com/widgets.js"]
+      # highlightStyle: github
+      # highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9' # alternatives '16:9' or '4:3' or others e.g. 13:9
+      navigation:
+        scroll: false # disable slide transitions by scrolling
+---
+
+---
+
+> Examples given for MAR and MNAR seem to me like they are the same thing. 
+What is the difference?
+
+* Suppose the survey asked questions with the following variables
+
+| Age | Salary      | SES |
+|:----|:------------|:----|
+| 16  | 100000      | 1   |
+| NA  | 100000      | 1   |
+| 16  | 100 (NA)    | 5   |
+| 55  | 100000      | 1   |
+| 55  | 1000000(NA) | 1   |
+
+* Example 1: _E.g. Let’s say we run a survey and some people don’t want to give their age in the questionnaire, but this does not relate to any other variable (including their party preference)_
+    - The age $(Y)$ is the variable with missing data. The missingness of age doesn't depend on any other covariate. Some people just dont want to reveal their age. (Missing value of $Y$ doesn't depend on anything)
+    _ Verbally mentioned a missing completely at random survey style
+        - There is another missing value technique to deal with this using available data
+        - E.g. Can compute pairwise correlations to do a multiple regression model.
+
+* Example 2: _In a survey, if people from a lower socioeconomic status may be less willing to provide salary information (but we know their SES status)._
+    - The salary $(Y)$ is the variable with missing data. The missingness of salary depends on the SES variable.
+
+---
+
+> Some slides are missing images in the lecture PDF file. 
+Is that an html exporting error? This occurs in previous weeks too. 
+
+* Yes it is. I was hoping to keep everything in HTML
+    - Feedback welcome on how to fix this.
+
+---
+
+> Does this have to be random imputation?
+
+![](QA.jpg)
+
+---
+
+> Why is the meaning of: "the uncertainty in the missing value data is lost"?
+
+* The comment there was referring to imputing missing data with a deterministic value.
+* However, statistical methods try and model uncertainty in sampled values.
+* Consider the extreme case.
+* You believe population comes from bell curve
+* Some are missing. You decide to replace the missing values with the mean.
+
+
+---
+
+> What is a dummy variable?
+
+I think I may have used it in the lecture to describe that I was keeping track of which variable has been set to missing and which is not missing.
+
+* Dummy variables are indicator or binary variables (either 0 or 1)
+    - In the binary case, a zero would denote the variable doesn't have the condition and 1 denotes the variable does have the condition.
+    - E.g. in regression you might want to include information on gender (or age etc)
+    - The model might be $Y = \beta_0 + \beta_1 X_1 + \beta_2X_2 + \varepsilon$
+
+---
+
+> Can you explain a little bit more the Cohen's Kappa metric? Can you provide an example?
+
+\[
+    \kappa = \frac{p_o - p_e}{1 - p_e} = 1 - \frac{1 - p_o}{1 - p_e}
+\]
+
+* $p_o =$ observed agreement of classes = Overall Accuracy
+* $p_e =$ hypothetical expected agreement 
+
+Consider the simple case of binary classification (two classes) with $n$ cases
+Call the two judges, judges $A$ and $B$.
+
+* Judge $A$ could denote the observed class assignment labels. 
+* Judge $B$ could denote the predicted class assignment labels
+
+\[
+    p_o = \text{Proportion of Agreement between judge $A$ and $B$} = \text{This is the accuracy.}
+\]
+
+The other metric $p_e$ is the empirical chance these judges give the classification by chance.
+
+\begin{align*}
+    p_e &= P(\text{Judge $A$ and Judge $B$ agree on a randomly picked element})\\
+        &= P(\text{Judge $A$ and Judge $B$ classify 1 or Judge $A$ and Judge $B$ classify 0})\\
+        &= P(\text{Judge $A$ and Judge $B$ classify 1}) + P(\text{Judge $A$ and Judge $B$ classify 0})\\
+        &= P(\text{Judge $A$ classify 1})P(\text{Judge $B$ classify 1}) + P(\text{Judge $A$ classify 0}) P(\text{Judge $B$ classify 0})
+\end{align*}
+
+```{r }
+library(caret)
+n <- 1e6; perc <- 98;
+obs <- factor(rep(c(0, 1),  c(perc/100 * n, (100 - perc)/100 * n)))
+m <- 0
+pred <- factor(rep(c(0, 1), c(n - m, m)), levels = c(0, 1))
+confusionMatrix(obs, pred)
+cM <- xtabs(~obs+pred)
+cM
+```
+
+
+Nice article on Cohen's Kappa [here](https://thenewstack.io/cohens-kappa-what-it-is-when-to-use-it-and-how-to-avoid-its-pitfalls/)

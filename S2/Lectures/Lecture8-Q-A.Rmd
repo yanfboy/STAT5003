@@ -1,0 +1,130 @@
+---
+title: "STAT5003"
+subtitle: "Week 8: Q & A"
+author: "Dr. Justin Wishart"
+institute: "The University of Sydney"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: ../style.css
+  xaringan::moon_reader:
+    keep_md: yes
+    css: ["assets/sydney-fonts.css", "assets/sydney.css"]
+    self_contained: false # if true, fonts will be stored locally
+    seal: false # show a title slide with YAML information
+    includes:
+      in_header: "assets/mathjax-equation-numbers.html"
+    nature:
+      # beforeInit: ["assets/remark-zoom.js", "https://platform.twitter.com/widgets.js"]
+      # highlightStyle: github
+      # highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9' # alternatives '16:9' or '4:3' or others e.g. 13:9
+      navigation:
+        scroll: false # disable slide transitions by scrolling
+---
+
+```{r setup, include = FALSE}
+library(RefManageR)
+BibOptions(check.entries = FALSE, 
+           bib.style = "authoryear", 
+           cite.style = 'authoryear', 
+           style = "markdown",
+           hyperlink = FALSE, 
+           dashed = FALSE)
+myBib <- ReadBib("../stat5003.bib", check = FALSE)
+```
+
+
+# $C_p$, BIC and adjusted $R^2$
+
+> _Are they only for linear regression, or they can be used for other regression, or even classification problems?_
+
+* BIC is a more general criterion, can be computed for any model that can be expressed as a likelihood
+
+* General form of BIC
+
+\begin{align*}
+  BIC &= - 2 \log_e L(\widehat{\theta}|\text{Data}) + 2k \log_e n\\
+    &= - 2 \text{log likelihood} + \text{Penalty}
+\end{align*}
+
+* Mainly applied in Time Series and regression
+
+* Can be applied to classification. All you need is a Likelihood.
+    - Linear Discriminant Analysis
+    - Gaussian Mixture model (not covered in this course)
+    
+
+---
+
+# Elastic Net
+
+> _How much do we need to know about this concept i.e. do we need to know how to use/implement it in theory, in practice, or in both?_
+
+* Short answer: neither. Only need to know about the special cases of Ridge regression and Lasso regression.
+* Long answer: Don't need to know but why does it even exist (apart from some academic curiousity)?
+
+Model: 
+\[ 
+  Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots + \beta_p X_p + \varepsilon
+\]
+
+* Issues with Ridge regression
+  - Weakness: Doesn't give sparsity, i.e. all $\beta$ are typically included
+    - Another viewpoint $\widehat \beta_{ridge} = \widehat \beta_{LS}/(1 + \lambda)$
+    - More discussion on 
+  - Strengths: Can handle highly correlated predictors.
+
+* Issues with Lasso
+  - Weakness: Doesn't handle correlated predictors well.
+    - Typically picks one fo the single predictors and shrink the others.
+  - Strength: Variable selection via shrinkage.
+    - Another viewpoint when $\boldsymbol{X}$ is orthonormal has $\widehat \beta_L = \text{sign}(\widehat \beta)(|\widehat \beta| - \lambda)_+$
+        - where $x_+ = \begin{cases} x & \text{ if } x > 0;\\ 0 &\text{ if } x\le 0\end{cases}$
+  
+* Why use the elastic net?
+    - Can handle highly correlated predictors and selects that together,
+    - Comes at computational cost, need to search over $\alpha$ as well.
+
+  
+* More discussion in 
+    - 3.4.3 `r Citet(myBib, "hastie-et-al-2017")`
+    - The source paper in 
+
+---
+
+# Choosing feature selection method
+
+> _When applying feature selection methods, should we apply each individually or we can use a combination of the different approaches? For example, if we know some columns are highly correlated and some has way too many missing values, should we remove these columns first, before applying the subset, forward or backward selection methods, or those methods will take care of these issues when we apply them to the whole dataset?_
+
+* Depends on the model being fitted.
+* E.g. 
+  - regular regression cannot handle highly correlated predictors very well.
+    - First variable included in the formula tends to get selected/estimated and the other becomes negligible.
+  - Ridge regression better designed to handle highly correlated predictors.
+* So if applying a technique that is know to perform poorly with highly correlated predictors. It should be kept in mind during the model fitting process.
+* If a technique can handle correlated predictors then don't need to pre-process or remove it.
+
+* Be aware some datasets can have completely redundant information.
+
+* I'd probably mention that if you apply feature selection and are using CV be very cautious about the benefit of feature selection if the answers vary wildly if you
+  - use different techniques (forward vs backward vs best)
+  - use different seeds to generate cross validation folds.
+
+
+---
+
+# R-code : forward step selection k-NN
+
+> _In feature selection, knn prediction is made with k = 3, but in subsequent fitting of the final model, k =5. Is this a mistake by any chance?_
+
+* Yes, a mistake. Sorry about that.
+
+---
+
+## References
+
+```{r, results = "asis", echo=FALSE}
+PrintBibliography(myBib)
+```

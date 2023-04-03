@@ -1,0 +1,36 @@
+---
+title: "Week 2 Report"
+author: "Statistical Learner"
+date: "Today"
+output: html_document
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Executive Summary
+
+# My app
+
+## UI code
+
+```{r shiny-data-files, context="data"}
+# Place your commands to read the data here
+#. e.g. mydat <- read.csv("lab-data.csv", header = TRUE)
+```
+
+```{r shiny-controls}
+sliderInput("slider", "Slide me:",
+            min = 1, max = 10,
+            value = 1)
+```
+    
+```{r plot-output}
+plotOutput("myplot")
+```
+
+```{r server-code, context="server"}
+output$myplot <- renderPlot({hist(faithful[, 1])})
+```

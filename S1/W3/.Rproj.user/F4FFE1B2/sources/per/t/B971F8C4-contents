@@ -1,0 +1,35 @@
+---
+title: "STAT5003T3"
+author: "Kaidan"
+date: "2022-08-21"
+output: html_document
+---
+
+## 3 Bandwidth selection
+### 3.1 Integrated square error
+
+```{r}
+set.seed(2022)
+# mean=0, sd=1, normal distribution
+z = rnorm(100)
+
+h.grid = seq(from = 0.01, to = 1, length.out = 20)
+h.grid
+
+density.estimates = lapply(h.grid, function(h) density(z, bw = h, n = 512, from = -3, to = 3))
+first.density.estimate = density.estimates[[1]]
+
+ISE = function(f, fhat)
+mean((fhat- f)^2)
+ISE.h = sapply(density.estimates, function(d) ISE(d$y, dnorm(d$x)))
+# for each KDE, computes ISE.
+plot(h.grid, ISE.h, type = "l", main = "ISE(h)",xlab = "Bandwidth (h)", ylab = "ISE")
+```
+
+```{r}
+opt.ind = which.min(ISE.h)
+opt.h = h.grid[opt.ind]
+plot(density.estimates[[opt.ind]], main = "",)
+x = density.estimates[[1]]$x
+lines(x, dnorm(x),lty=2, col=2)
+```
